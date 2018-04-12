@@ -1,0 +1,147 @@
+---
+title: "DataDesc"
+author: "Patrick Tawil"
+date: "March 6, 2018"
+output: pdf_document
+---
+
+```{r, include=FALSE}
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+#load("hedonic.Rda")
+#hedonic_temp <- hedonic %>% gather(Area, "num", 42:50) 
+#hedonic_temp <- hedonic_temp %>% filter(hedonic_temp$num==1)
+#hedonic_temp$num <- NULL
+#hedonic_temp <- hedonic_temp %>% gather(bed_type, "num", 19:23) 
+#hedonic_temp <- hedonic_temp %>% filter(hedonic_temp$num==1)
+#hedonic_temp$num <- NULL
+#hedonic_temp <- hedonic_temp %>% gather(host_has_profile_pic, "num", 19:21)
+#hedonic_temp <- hedonic_temp %>% filter(hedonic_temp$num==1)
+#hedonic_temp$num <- NULL
+#hedonic_temp <- hedonic_temp %>% gather(host_is_superhost, "num", 19:21)
+#hedonic_temp <- hedonic_temp %>% filter(hedonic_temp$num==1)
+#hedonic_temp$num <- NULL
+#hedonic_temp <- hedonic_temp %>% gather(room_type, "num", 19:21)
+#hedonic_temp <- hedonic_temp %>% filter(hedonic_temp$num==1)
+#hedonic_temp$num <- NULL
+#hedonic_temp <- hedonic_temp %>% gather(instant_bookable, "num", 19:20)
+#hedonic_temp <- hedonic_temp %>% filter(hedonic_temp$num==1)
+#hedonic_temp$num <- NULL
+#hedonic_temp <- hedonic_temp %>% gather(cancellation_policy, "num", 19:21)
+#hedonic_temp <- hedonic_temp %>% filter(hedonic_temp$num==1)
+#hedonic_temp$num <- NULL
+#save(hedonic_temp, file ="hedonic_fixed.Rda")
+load("hedonic_fixed.Rda")
+```
+
+I'll be making a summary about the variables at hand. 
+
+Intuitively, one of the main aspect of a house that would increase its cost is the amount of square feet. Sadly with the data given, out 20,545 observations we only had 496 recorded values for square feet. This made it a very poor predictor to use.
+
+```{r, include=FALSE}
+summary(hedonic_temp$square_feet)
+```
+
+\begin{table}[htbp]
+\centering
+\caption{Summary of the Square Feet column}
+\label{my-label}
+\begin{tabular}{|l|l|l|l|l|l|l|}
+\hline
+Mininum & 1st Quartile & Median & Mean  & 3rd Quartile & Maximum & Number of NAs \\ \hline
+0       & 97           & 700    & 673.5 & 1023         & 2799    & 20049         \\ \hline
+\end{tabular}
+\end{table}
+
+
+```{r, warning=FALSE, echo = FALSE}
+filtered <- hedonic_temp %>% filter(hedonic_temp$square_feet >= 70)
+model <- lm(lm(filtered$price_total~filtered$square_feet))
+ggplot(filtered, aes(filtered$square_feet, filtered$price_usd)) + geom_point() + ggtitle("Price to Square feet") + xlab("Square Feet") + ylab("Price (USD)") + xlim(c(0,2000)) + geom_abline(intercept = model$coefficients[1], slope = model$coefficients[2], color = "red")
+rm(filtered)
+rm(model)
+```
+
+This graph shows a clear correlation for a larger square feet leading to a higher price. Unfortunately, further showing how unreliable the data on square feet we have is, we have over 100 observations with 0 square feet. Furthermore we have quite a few more with less than 70, making it really questionable if someone can really live in such a small room.
+
+Another predictor that is usually expected to raise the price of a house is the region it is located in. Unfortunately the data itself did not provide common neighborhoods, therefore we had to create a few out of the lattitude and longitude given.
+
+```{r, include = FALSE}
+hedonic_temp %>% group_by(Area) %>% filter(!is.na(price_total)) %>% summarise(AverageCost = mean(price_total), MedianCost = median(price_total)) %>% arrange(desc(AverageCost, MedianCost))
+```
+
+\begin{table}[htbp]
+\centering
+\caption{Mean and Median of Price Depending on the Region}
+\label{my-label}
+\begin{tabular}{|l|l|l|}
+\hline
+Area               & Mean     & Median   \\ \hline
+Center Copenhagen  & 142.3402 & 141.1364 \\ \hline
+West Copenhagen    & 134.5285 & 132.8634 \\ \hline
+Frederiksberg      & 127.8715 & 124.0941 \\ \hline
+East Copenhagen    & 121.8465 & 116.1521 \\ \hline
+NA                 & 119.5094 & 116.1521 \\ \hline
+South Copenhagen   & 118.936  & 115.3248 \\ \hline
+North Copenhagen   & 113.2218 & 107.7137 \\ \hline
+Greater Copenhagen & 109.3131 & 98.94437 \\ \hline
+Valby              & 107.2231 & 99.77167 \\ \hline
+\end{tabular}
+\end{table}
+
+Now we can check the distribution of each Area. Most of them are alike but we can clearly see that houses in the Valby region are generally cheaper than their counterparts.
+
+```{r, warning = FALSE, echo = FALSE}
+spliter <- c("Central Copenhagen", "East Copenhagen", "North Copenhagen", "South Copenhagen", "West Copenhagen", "Frederiksberg", "Greater Copenhagen", "NA", "Valby")
+ggplot(hedonic_temp, aes(factor(Area), hedonic_temp$price_total)) + geom_violin(scale = "area") + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ylab("Total Price (USD)") + scale_x_discrete(labels = spliter) + xlab("Area") + ggtitle("Violin Plots of the Total Price to Area")
+rm(spliter)
+```
+
+You can also tell that places like Greater Coppenhagen have some extreme values as the median is smaller than the mean. This violin plot confirms it,most observations are concentrted at the under 100 range but the extreme values raise the average.
+
+```{r, include=FALSE}
+table(hedonic_temp$Area)
+```
+
+\begin{table}[htbp]
+\centering
+\caption{Frequency Table of Listings Depending on Area}
+\label{my-label}
+\begin{tabular}{|l|l|}
+\hline
+Area               & Frequency \\ \hline
+Center Copenhagen  & 2292 \\ \hline
+West Copenhagen    & 2549 \\ \hline
+Frederiksberg      & 2408 \\ \hline
+East Copenhagen    & 2379 \\ \hline
+NA                 & 653 \\ \hline
+South Copenhagen   & 3798  \\ \hline
+North Copenhagen   & 4886 \\ \hline
+Greater Copenhagen & 808 \\ \hline
+Valby              & 772 \\ \hline
+\end{tabular}
+\end{table}
+
+
+It is important to note that some areas have much mroe observations than others. For example Valby only has 772 listings compared to N. Copenhagen with 4886. This can either be due to people living there not being able to afford having someone else live in their house, for lack of space. Considering Valby is larger than N. Copenhagen it can also indicate that the density of people is greater in that region. 
+
+```{r, warning=FALSE, echo = FALSE}
+ggplot(hedonic_temp, aes(review_scores_rating, price_total)) + geom_smooth() + geom_point() + ggtitle("Review scores to Price") + xlab("Review Scores") + ylab("Total Price(USD)")
+```
+
+Here we can see rating does not seem to really influence anything. Though it is hard to say for any value thats under 60, the standard error becomes really small as we get pas the 80 range. There is a small increase past the 90 margin, which might just be enough to be considered statistically significant. But this also shows that low reviews are pretty rare as can be shown here
+
+```{r, warning = FALSE, echo=FALSE}
+ggplot(hedonic_temp, aes(review_scores_rating)) + geom_density() + ggtitle("Density of Review Score") + xlab("Review Scores") + ylab("Density")
+```
+
+Most values are near the 90/100+ range. Odds are most people just click top score if they had no issues.
+
+```{r, warning = FALSE, echo=FALSE}
+filtered <- hedonic_temp %>% filter(hedonic_temp$host_is_superhost != "host_is_superhost_NA")
+SuperHostStatus <- c("Not a Superhost", "Is a SuperHost")
+ggplot(filtered, aes(filtered$host_is_superhost, price_total)) + geom_boxplot() + ggtitle("Boxplots of Price to SuperHost Status") +xlab("Superhost Status") + ylab("Total Price (USD)") + scale_x_discrete(labels = SuperHostStatus)
+rm(SuperHostStatus)
+rm(filtered)
+```
